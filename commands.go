@@ -65,6 +65,15 @@ func handlerRegister(s *state, cmd command) error {
 	return nil
 }
 
+func handlerReset(s *state, cmd command) error {
+	err := s.db.DeleteUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("error in reset func %w", err)
+	}
+	fmt.Println("Database reset successful")
+	return nil
+}
+
 func (c *commands) register(name string, f func(*state, command) error) {
 	c.cmds[name] = f
 }
