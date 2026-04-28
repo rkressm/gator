@@ -74,6 +74,21 @@ func handlerReset(s *state, cmd command) error {
 	return nil
 }
 
+func handlerUsers(s *state, cmd command) error {
+	registeredUsers, err := s.db.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("error fetching users: %w", err)
+	}
+	for _, user := range registeredUsers {
+		if user.Name == s.cfg.CurrentUserName {
+			fmt.Printf("* %s (current)\n", user.Name)
+		} else {
+			fmt.Printf("* %s\n", user.Name)
+		}
+	}
+	return nil
+}
+
 func (c *commands) register(name string, f func(*state, command) error) {
 	c.cmds[name] = f
 }

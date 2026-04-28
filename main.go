@@ -22,6 +22,7 @@ func main() {
 	commandsList.register("login", handlerLogin)
 	commandsList.register("register", handlerRegister)
 	commandsList.register("reset", handlerReset)
+	commandsList.register("users", handlerUsers)
 	actualCommand := command{
 		name:      args[1],
 		arguments: args[2:],
