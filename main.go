@@ -16,13 +16,11 @@ func main() {
 		fmt.Println("Not enough args")
 		os.Exit(1)
 	}
-	commandsList := commands{
-		cmds: make(map[string]func(*state, command) error),
+	commandsList, err := commandsInitializer()
+	if err != nil {
+		fmt.Printf("error while initializing commands %s", err)
+		os.Exit(1)
 	}
-	commandsList.register("login", handlerLogin)
-	commandsList.register("register", handlerRegister)
-	commandsList.register("reset", handlerReset)
-	commandsList.register("users", handlerUsers)
 	actualCommand := command{
 		name:      args[1],
 		arguments: args[2:],
