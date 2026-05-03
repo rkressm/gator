@@ -16,6 +16,9 @@ func commandsInitializer() (commands, error) {
 	commandsList.register("register", handlerRegister)
 	commandsList.register("reset", handlerReset)
 	commandsList.register("users", handlerUsers)
+	commandsList.register("agg", handlerfetchFeed)
+	commandsList.register("addfeed", handlerAddFeed)
+	commandsList.register("feeds", handlerFeeds)
 	return commandsList, nil
 }
 
