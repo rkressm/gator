@@ -65,13 +65,14 @@ func handlerfetchFeed(s *state, cmd command) error {
 	if err != nil {
 		return fmt.Errorf("error in handlerfetchfee %w", err)
 	}
+	//Edit here for agg logic
 	fmt.Printf("%+v\n", feed)
 	return nil
 }
 
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.arguments) != 2 {
-		return fmt.Errorf("not enough args for addfeed command")
+		return fmt.Errorf("incorrect args for addfeed command")
 	}
 	ctx := context.Background()
 	name := cmd.arguments[0]
@@ -91,7 +92,16 @@ func handlerAddFeed(s *state, cmd command) error {
 	if err != nil {
 		return fmt.Errorf("error creating the feed: %w", err)
 	}
-	fmt.Printf("%+v\n", newfeed)
+	_, err = s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    currentUser.ID,
+		FeedID:    newfeed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("error in handlerAddfeed: %w", err)
+	}
 	return nil
 }
 
