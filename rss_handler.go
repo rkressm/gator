@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"html"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,8 +50,31 @@ func scrapeFeeds(s *state) {
 		log.Println("something went wrong:", err)
 		return
 	}
-	for _, feed := range feeds.Channel.Item {
-		fmt.Println(feed.Title)
+	for _, item := range feeds.Channel.Item {
+		publishedAt := sql.NullTime{}
+		if t, err := time.Parse(time.RFC1123Z, item.PubDate); err == nil {
+			publishedAt = sql.NullTime{
+				Time:  t,
+				Valid: true,
+			}
+		}
+		_, err := s.db.CreatePost(ctx, database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   time.Now().UTC(),
+			UpdatedAt:   time.Now().UTC(),
+			FeedID:      feedToFetch.ID,
+			Title:       item.Title,
+			Description: sql.NullString{String: item.Description, Valid: true},
+			Url:         item.Link,
+			PublishedAt: publishedAt,
+		})
+		if err != nil {
+			if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+				continue
+			}
+			log.Printf("Couldn't create post: %v", err)
+			continue
+		}
 	}
 }
 
@@ -80,6 +106,34 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 		rssfeed.Channel.Item[i].Description = html.UnescapeString(rssfeed.Channel.Item[i].Description)
 	}
 	return &rssfeed, nil
+}
+
+func handlerBrowse(s *state, cmd command, user database.User) error {
+	ctx := context.Background()
+	var limit int32 = 2
+	if len(cmd.arguments) == 1 {
+		parsed, err := strconv.Atoi(cmd.arguments[0])
+		if err != nil {
+			return fmt.Errorf("invalid limit: %w", err)
+		}
+		limit = int32(parsed)
+	}
+	posts, err := s.db.GetPostsForUser(ctx, database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  limit,
+	})
+	if err != nil {
+		return fmt.Errorf("something wrong happened: %w", err)
+	}
+	fmt.Printf("Found %d posts for user %s:\n", len(posts), user.Name)
+	for _, post := range posts {
+		fmt.Printf("%s\n", post.PublishedAt.Time.Format("Mon Jan 2"))
+		fmt.Printf("--- %s ---\n", post.Title)
+		fmt.Printf("    %v\n", post.Description.String)
+		fmt.Printf("Link: %s\n", post.Url)
+		fmt.Println("=====================================")
+	}
+	return nil
 }
 
 func handlerAgg(s *state, cmd command) error {
