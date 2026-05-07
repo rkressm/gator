@@ -30,7 +30,7 @@ func commandsInitializer() (commands, error) {
 	commandsList.register("register", handlerRegister)
 	commandsList.register("reset", handlerReset)
 	commandsList.register("users", handlerUsers)
-	commandsList.register("agg", handlerfetchFeed)
+	commandsList.register("agg", handlerAgg)
 	commandsList.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	commandsList.register("feeds", handlerFeeds)
 	commandsList.register("follow", middlewareLoggedIn(handlerFollow))

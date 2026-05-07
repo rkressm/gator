@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -27,6 +28,28 @@ type RSSItem struct {
 	Link        string `xml:"link"`
 	Description string `xml:"description"`
 	PubDate     string `xml:"pubDate"`
+}
+
+func scrapeFeeds(s *state) {
+	ctx := context.Background()
+	feedToFetch, err := s.db.GetNextFeedToFetch(ctx)
+	if err != nil {
+		log.Println("something went wrong:", err)
+		return
+	}
+	_, err = s.db.MarkFeedFetched(ctx, feedToFetch.ID)
+	if err != nil {
+		log.Println("something went wrong:", err)
+		return
+	}
+	feeds, err := fetchFeed(ctx, feedToFetch.Url)
+	if err != nil {
+		log.Println("something went wrong:", err)
+		return
+	}
+	for _, feed := range feeds.Channel.Item {
+		fmt.Println(feed.Title)
+	}
 }
 
 func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
@@ -59,15 +82,19 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return &rssfeed, nil
 }
 
-func handlerfetchFeed(s *state, cmd command) error {
-	ctx := context.Background()
-	feed, err := fetchFeed(ctx, "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		return fmt.Errorf("error in handlerfetchfee %w", err)
+func handlerAgg(s *state, cmd command) error {
+	if len(cmd.arguments) != 1 {
+		return fmt.Errorf("incorrect args for agg command")
 	}
-	//Edit here for agg logic
-	fmt.Printf("%+v\n", feed)
-	return nil
+	interval, err := time.ParseDuration(cmd.arguments[0])
+	if err != nil {
+		return fmt.Errorf("error parsing duration: %w", err)
+	}
+	fmt.Printf("Collecting feeds every %v...\n", interval)
+	ticker := time.NewTicker(interval)
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
+	}
 }
 
 func handlerAddFeed(s *state, cmd command, user database.User) error {
